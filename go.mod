@@ -9,9 +9,9 @@ require (
 	github.com/rai-project/logger v0.0.0-20190701163301-49978a80bf96 // indirect
 	github.com/rai-project/nvidia-smi v0.0.0-20190730061239-864eb441c9ae
 	github.com/rai-project/tegra v0.0.0-20181119122707-1d9901ca382b // indirect
-	github.com/xxxserxxx/gotop v0.0.0-20200228130651-7a89225d729d
+	github.com/xxxserxxx/gotop/v3 v3.5.0
 )
 
-replace github.com/xxxserxxx/gotop => ../gotop
+//replace github.com/xxxserxxx/gotop/v3 => ../gotop
 
-go 1.13
+go 1.14

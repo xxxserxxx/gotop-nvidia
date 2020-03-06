@@ -9,7 +9,7 @@ import (
 
 	"github.com/rai-project/nvidia-smi"
 	//"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
-	"github.com/xxxserxxx/gotop/devices"
+	"github.com/xxxserxxx/gotop/v3/devices"
 )
 
 func Init() {
@@ -19,7 +19,7 @@ func Init() {
 }
 
 func updateNvidiaTemp(temps map[string]int) map[string]error {
-	var errs map[string]error
+	errs := make(map[string]error)
 	info, err := nvidiasmi.New()
 	if err != nil {
 		errs["nvidia"] = err
@@ -27,6 +27,10 @@ func updateNvidiaTemp(temps map[string]int) map[string]error {
 	if info.HasGPU() {
 		for i := range info.GPUS {
 			gpu := info.GPUS[i]
+			if gpu.GpuTemp == "N/A" {
+				// The GPU does not export a temperature measure
+				continue
+			}
 			name := gpu.ProductName + " " + strconv.Itoa(i)
 			temperature, err := strconv.ParseFloat(strings.ReplaceAll(gpu.GpuTemp, " C", ""), 10)
 			if err != nil {
@@ -40,7 +44,7 @@ func updateNvidiaTemp(temps map[string]int) map[string]error {
 }
 
 func updateNvidiaMem(mems map[string]devices.MemoryInfo) map[string]error {
-	var errs map[string]error
+	errs := make(map[string]error)
 	info, err := nvidiasmi.New()
 	if err != nil {
 		errs["nvidia"] = err
@@ -48,8 +52,16 @@ func updateNvidiaMem(mems map[string]devices.MemoryInfo) map[string]error {
 	if info.HasGPU() {
 		for i := range info.GPUS {
 			gpu := info.GPUS[i]
+			if gpu.MemoryUtil == "N/A" || gpu.Total == "N/A" || gpu.Used == "N/A" {
+				// The GPU does not export sufficient memory measures
+				continue
+			}
 			name := gpu.ProductName + strconv.Itoa(i)
 			mem, err := strconv.Atoi(gpu.MemoryUtil)
+			if err != nil {
+				errs[name+"Mem"] = err
+				continue
+			}
 			total, err := strconv.Atoi(gpu.Total)
 			if err != nil {
 				errs[name+"Total"] = err
@@ -60,11 +72,19 @@ func updateNvidiaMem(mems map[string]devices.MemoryInfo) map[string]error {
 				errs[name+"Used"] = err
 				continue
 			}
+			if total == 0 && used == 0 {
+				total = 100
+				used = mem
+			} else if total != 0 && used == 0 {
+				used = int(float64(total) * (float64(mem) / 100))
+			} else if total == 0 && used != 0 {
+				total = int(float64(used) / (float64(mem) / 100))
+			}
 			dev := devices.MemoryInfo{
 				Total: uint64(total),
 				Used:  uint64(used),
 			}
-			dev.UsedPercent = 1.0 / float64(mem)
+			dev.UsedPercent = float64(mem)
 			mems[name] = dev
 		}
 	}
@@ -81,6 +101,10 @@ func updateNvidiaUsage(cpus map[string]int, _ time.Duration, _ bool) map[string]
 	if info.HasGPU() {
 		for i := range info.GPUS {
 			gpu := info.GPUS[i]
+			if gpu.GpuUtil == "N/A" {
+				// The GPU does not export sufficient memory measures
+				continue
+			}
 			name := gpu.ProductName + " " + strconv.Itoa(i)
 			usage, err := strconv.Atoi(gpu.GpuUtil)
 			if err != nil {

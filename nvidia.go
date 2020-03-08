@@ -23,6 +23,7 @@ func updateNvidiaTemp(temps map[string]int) map[string]error {
 	info, err := nvidiasmi.New()
 	if err != nil {
 		errs["nvidia"] = err
+		return errs
 	}
 	if info.HasGPU() {
 		for i := range info.GPUS {
@@ -48,6 +49,7 @@ func updateNvidiaMem(mems map[string]devices.MemoryInfo) map[string]error {
 	info, err := nvidiasmi.New()
 	if err != nil {
 		errs["nvidia"] = err
+		return errs
 	}
 	if info.HasGPU() {
 		for i := range info.GPUS {

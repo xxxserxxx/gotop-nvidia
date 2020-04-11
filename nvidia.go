@@ -1,4 +1,4 @@
-package main
+package nvidia
 
 // TODO: Optimization: cache most recent info w/ timestamp, and only update if older than X
 
@@ -12,7 +12,7 @@ import (
 	"github.com/xxxserxxx/gotop/v3/devices"
 )
 
-func Init() {
+func init() {
 	devices.RegisterTemp(updateNvidiaTemp)
 	devices.RegisterMem(updateNvidiaMem)
 	devices.RegisterCPU(updateNvidiaUsage)

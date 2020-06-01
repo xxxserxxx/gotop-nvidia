@@ -1,12 +1,13 @@
 package nvidia
 
-// TODO: Optimization: cache most recent info w/ timestamp, and only update if older than X
-
 import (
+	"bytes"
+	"encoding/csv"
+	"os/exec"
 	"strconv"
-	"strings"
+	"sync"
+	"time"
 
-	"github.com/rai-project/nvidia-smi"
 	//"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
 	"github.com/xxxserxxx/gotop/v4/devices"
 )
@@ -15,105 +16,106 @@ func init() {
 	devices.RegisterTemp(updateNvidiaTemp)
 	devices.RegisterMem(updateNvidiaMem)
 	devices.RegisterCPU(updateNvidiaUsage)
+
+	lock = sync.Mutex{}
+	devices.RegisterStartup(startup)
 }
 
 func updateNvidiaTemp(temps map[string]int) map[string]error {
-	errs := make(map[string]error)
-	info, err := nvidiasmi.New()
-	if err != nil {
-		errs["nvidia"] = err
-		return errs
+	lock.Lock()
+	defer lock.Unlock()
+	for k, v := range _temps {
+		temps[k] = v
 	}
-	if info.HasGPU() {
-		for i := range info.GPUS {
-			gpu := info.GPUS[i]
-			if gpu.GpuTemp == "N/A" {
-				// The GPU does not export a temperature measure
-				continue
-			}
-			name := gpu.ProductName + " " + strconv.Itoa(i)
-			temperature, err := strconv.ParseFloat(strings.ReplaceAll(gpu.GpuTemp, " C", ""), 10)
-			if err != nil {
-				errs[name] = err
-				continue
-			}
-			temps[name] = int(temperature)
-		}
-	}
-	return errs
+	return errors
 }
 
 func updateNvidiaMem(mems map[string]devices.MemoryInfo) map[string]error {
-	errs := make(map[string]error)
-	info, err := nvidiasmi.New()
-	if err != nil {
-		errs["nvidia"] = err
-		return errs
+	lock.Lock()
+	defer lock.Unlock()
+	for k, v := range _mems {
+		mems[k] = v
 	}
-	if info.HasGPU() {
-		for i := range info.GPUS {
-			gpu := info.GPUS[i]
-			if gpu.MemoryUtil == "N/A" || gpu.Total == "N/A" || gpu.Used == "N/A" {
-				// The GPU does not export sufficient memory measures
-				continue
-			}
-			name := gpu.ProductName + strconv.Itoa(i)
-			mem, err := strconv.Atoi(gpu.MemoryUtil)
-			if err != nil {
-				errs[name+"Mem"] = err
-				continue
-			}
-			total, err := strconv.Atoi(gpu.Total)
-			if err != nil {
-				errs[name+"Total"] = err
-				continue
-			}
-			used, err := strconv.Atoi(gpu.Used)
-			if err != nil {
-				errs[name+"Used"] = err
-				continue
-			}
-			if total == 0 && used == 0 {
-				total = 100
-				used = mem
-			} else if total != 0 && used == 0 {
-				used = int(float64(total) * (float64(mem) / 100))
-			} else if total == 0 && used != 0 {
-				total = int(float64(used) / (float64(mem) / 100))
-			}
-			dev := devices.MemoryInfo{
-				Total: uint64(total),
-				Used:  uint64(used),
-			}
-			dev.UsedPercent = float64(mem)
-			mems[name] = dev
-		}
-	}
-	return errs
+	return errors
 }
 
 func updateNvidiaUsage(cpus map[string]int, _ bool) map[string]error {
-	errs := make(map[string]error)
-	info, err := nvidiasmi.New()
-	if err != nil {
-		errs["nvidia"] = err
-		return errs
+	lock.Lock()
+	defer lock.Unlock()
+	for k, v := range _cpus {
+		cpus[k] = v
 	}
-	if info.HasGPU() {
-		for i := range info.GPUS {
-			gpu := info.GPUS[i]
-			if gpu.GpuUtil == "N/A" {
-				// The GPU does not export sufficient memory measures
-				continue
-			}
-			name := gpu.ProductName + " " + strconv.Itoa(i)
-			usage, err := strconv.Atoi(gpu.GpuUtil)
-			if err != nil {
-				errs[name] = err
-				continue
-			}
-			cpus[name] = usage
+	return errors
+}
+
+func startup(vars map[string]string) error {
+	var err error
+	refresh := time.Second
+	if v, ok := vars["nvidia-refresh"]; ok {
+		if refresh, err = time.ParseDuration(v); err != nil {
+			return err
 		}
 	}
-	return errs
+	go func() {
+		timer := time.Tick(refresh)
+		for range timer {
+			update()
+		}
+	}()
+	return nil
+}
+
+var (
+	_temps map[string]int
+	_mems  map[string]devices.MemoryInfo
+	_cpus  map[string]int
+	errors map[string]error
+)
+
+var lock sync.Mutex
+
+// update updates the cached NVidia metric data: name, index,
+// temperature.gpu, utilization.gpu, utilization.memory, memory.total, memory.free, memory.used
+func update() {
+	bs, err := exec.Command(
+		"nvidia-smi",
+		"--query-gpu=name,index,temperature.gpu,utilization.gpu,memory.total,memory.used",
+		"--format=csv,noheader,nounits").Output()
+	if err != nil {
+		errors["nvidia"] = err
+		return
+	}
+
+	csvReader := csv.NewReader(bytes.NewReader(bs))
+	csvReader.TrimLeadingSpace = true
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		errors["nvidia"] = err
+		return
+	}
+
+	lock.Lock()
+	defer lock.Unlock()
+	for _, row := range records {
+		name := row[0] + "." + row[1]
+		if _temps[name], err = strconv.Atoi(row[2]); err != nil {
+			errors[name] = err
+		}
+		if _cpus[name], err = strconv.Atoi(row[3]); err != nil {
+			errors[name] = err
+		}
+		t, err := strconv.Atoi(row[4])
+		if err != nil {
+			errors[name] = err
+		}
+		u, err := strconv.Atoi(row[5])
+		if err != nil {
+			errors[name] = err
+		}
+		_mems[name] = devices.MemoryInfo{
+			Total:       uint64(t),
+			Used:        uint64(u),
+			UsedPercent: float64(u) / float64(t),
+		}
+	}
 }

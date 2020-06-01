@@ -5,11 +5,10 @@ package nvidia
 import (
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/rai-project/nvidia-smi"
 	//"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
-	"github.com/xxxserxxx/gotop/v3/devices"
+	"github.com/xxxserxxx/gotop/v4/devices"
 )
 
 func init() {
@@ -93,7 +92,7 @@ func updateNvidiaMem(mems map[string]devices.MemoryInfo) map[string]error {
 	return errs
 }
 
-func updateNvidiaUsage(cpus map[string]int, _ time.Duration, _ bool) map[string]error {
+func updateNvidiaUsage(cpus map[string]int, _ bool) map[string]error {
 	errs := make(map[string]error)
 	info, err := nvidiasmi.New()
 	if err != nil {

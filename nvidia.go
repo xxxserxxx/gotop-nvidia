@@ -13,6 +13,10 @@ import (
 )
 
 func init() {
+	_temps = make(map[string]int)
+	_mems  = make(map[string]devices.MemoryInfo)
+	_cpus  = make(map[string]int)
+	errors = make(map[string]error)
 	devices.RegisterTemp(updateNvidiaTemp)
 	devices.RegisterMem(updateNvidiaMem)
 	devices.RegisterCPU(updateNvidiaUsage)

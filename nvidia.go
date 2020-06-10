@@ -117,8 +117,8 @@ func update() {
 			errors[name] = err
 		}
 		_mems[name] = devices.MemoryInfo{
-			Total:       uint64(t),
-			Used:        uint64(u),
+			Total:       1048576*uint64(t),
+			Used:        1048576*uint64(u),
 			UsedPercent: float64(u) / float64(t),
 		}
 	}

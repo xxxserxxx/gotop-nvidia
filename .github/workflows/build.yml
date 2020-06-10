@@ -46,10 +46,7 @@ jobs:
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "${VERSION}+nvidia-${NVIDIA}"
+          automatic_release_tag: "${{ github.event.client_payload.tag }}+nvidia-${{ steps.tag_name.outputs.tag }}"
           draft: false
-          title: "${VERSION} Linux amd64 with NVidia ${NVIDIA} extension"
+          title: "${{ github.event.client_payload.tag }} Linux amd64 with NVidia ${{ steps.tag_name.outputs.tag }} extension"
           files: gotop.xz
-        env:
-            VERSION: ${{ github.event.client_payload.tag }}
-            NVIDIA: ${{ steps.tag_name.outputs.tag }}

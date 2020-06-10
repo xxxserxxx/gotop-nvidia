@@ -33,7 +33,7 @@ jobs:
 
       - name: Compile
         shell: bash
-        run: go build -o gotop -ldflags "-extldflags '-static' -X main.Version=${VERSION}+nvidia:${NVIDIA} -X main.BuildDate=$(date +%Y%m%dT%H%M%s)" ./gotop.go
+        run: go build -o gotop -ldflags "-extldflags '-static' -X main.Version=${VERSION}+nvidia-${NVIDIA} -X main.BuildDate=$(date +%Y%m%dT%H%M%s)" ./gotop.go
         env:
             VERSION: ${{ github.event.client_payload.tag }}
             NVIDIA: ${{ steps.tag_name.outputs.tag }}
@@ -46,7 +46,7 @@ jobs:
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "${VERSION}+nvidia:${NVIDIA}"
+          automatic_release_tag: "${VERSION}+nvidia-${NVIDIA}"
           draft: false
           title: "${VERSION} Linux amd64 with NVidia ${NVIDIA} extension"
           files: gotop.xz

@@ -9,7 +9,8 @@ The easiest way is to not try to compile from this repository, but use the [goto
 ```
 mkdir gotop-nvidia
 cd gotop-nvidia
-go run github.com/xxxserxxx/gotop-builder -r v4.1.0 github.com/xxxserxxx/gotop-nvidia
+go get -u github.com/xxxserxxx/gotop-builder
+gotop-builder -r v4.1.0 github.com/xxxserxxx/gotop-nvidia
 go build -o gotop-nvidia ./gotop.go
 ```
 
@@ -24,7 +25,8 @@ From this repository, run:
 ```
 mkdir tmp
 cd tmp
-go run github.com/xxxserxxx/gotop-builder -r v4.1.0 github.com/xxxserxxx/gotop-nvidia
+go get -u github.com/xxxserxxx/gotop-builder
+gotop-builder -r v4.1.0 github.com/xxxserxxx/gotop-nvidia
 echo 'replace github.com/xxxserxxx/gotop-nvidia => ../' >> go.mod
 go build -o gotop .
 ```

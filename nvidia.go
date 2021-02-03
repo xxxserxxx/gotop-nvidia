@@ -132,8 +132,8 @@ func update() {
 		"--format=csv,noheader,nounits").Output()
 	if err != nil {
 		errors["nvidia"] = err
-		bs = []byte("GeForce GTX 1080 Ti, 0, 31, 9, 11175, 206")
-		//return
+		//bs = []byte("GeForce GTX 1080 Ti, 0, 31, 9, 11175, 206")
+		return
 	}
 	csvReader := csv.NewReader(bytes.NewReader(bs))
 	csvReader.TrimLeadingSpace = true
